@@ -1,0 +1,11 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "ConnectionStrings:Default": "Host=localhost;Port=5432;Database=inventorydb;Username=inventory_user;Password=changeme",
+    "SendGrid:ApiKey": "your_sendgrid_api_key_here",
+    "Alert:FromEmail": "alerts@example.com",
+    "Alert:ToEmail": "staff@example.com"
+  }
+}
