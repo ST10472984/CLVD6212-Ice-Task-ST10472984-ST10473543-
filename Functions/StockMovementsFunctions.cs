@@ -4,6 +4,8 @@ using InventoryTracker.Functions.Data;
 using InventoryTracker.Functions.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -23,6 +25,9 @@ public class StockMovementsFunctions
     }
 
     [Function("GetMovementsForProduct")]
+    [OpenApiOperation(operationId: "GetMovementsForProduct", tags: new[] { "StockMovements" }, Summary = "List stock movements for a product")]
+    [OpenApiParameter(name: "id", In = ParameterLocation.Path, Required = true, Type = typeof(int))]
+    [OpenApiResponseWithBody(HttpStatusCode.OK, "application/json", typeof(List<StockMovement>), Description = "Movements, newest first")]
     public async Task<HttpResponseData> GetMovementsForProduct(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "products/{id:int}/movements")] HttpRequestData req,
         int id)
@@ -39,6 +44,12 @@ public class StockMovementsFunctions
     }
 
     [Function("CreateStockMovement")]
+    [OpenApiOperation(operationId: "CreateStockMovement", tags: new[] { "StockMovements" }, Summary = "Log a stock movement (adjusts current stock)")]
+    [OpenApiParameter(name: "id", In = ParameterLocation.Path, Required = true, Type = typeof(int))]
+    [OpenApiRequestBody("application/json", typeof(StockMovementRequest), Required = true)]
+    [OpenApiResponseWithBody(HttpStatusCode.Created, "application/json", typeof(object), Description = "The movement and the product's updated stock level")]
+    [OpenApiResponseWithoutBody(HttpStatusCode.NotFound, Description = "Product not found")]
+    [OpenApiResponseWithoutBody(HttpStatusCode.Conflict, Description = "Movement would result in negative stock")]
     public async Task<HttpResponseData> CreateStockMovement(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "products/{id:int}/movements")] HttpRequestData req,
         int id)
@@ -59,8 +70,8 @@ public class StockMovementsFunctions
             return badRequest;
         }
 
-        var newStock = product.CurrentStock + payload.QuantityChange;
-        if (newStock < 0)
+        var newStock = InventoryTracker.Functions.Services.StockMovementValidator.CalculateNewStock(product.CurrentStock, payload.QuantityChange);
+        if (InventoryTracker.Functions.Services.StockMovementValidator.WouldResultInNegativeStock(product.CurrentStock, payload.QuantityChange))
         {
             var conflict = req.CreateResponse(HttpStatusCode.Conflict);
             await conflict.WriteAsJsonAsync(new { error = "Movement would result in negative stock." });

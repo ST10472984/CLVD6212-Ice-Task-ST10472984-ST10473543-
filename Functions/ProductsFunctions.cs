@@ -4,8 +4,11 @@ using InventoryTracker.Functions.Data;
 using InventoryTracker.Functions.Models;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Http;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
+using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.OpenApi.Models;
 
 namespace InventoryTracker.Functions.Functions;
 
@@ -23,6 +26,8 @@ public class ProductsFunctions
     }
 
     [Function("GetProducts")]
+    [OpenApiOperation(operationId: "GetProducts", tags: new[] { "Products" }, Summary = "List all products")]
+    [OpenApiResponseWithBody(HttpStatusCode.OK, "application/json", typeof(List<Product>), Description = "All products")]
     public async Task<HttpResponseData> GetProducts(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "products")] HttpRequestData req)
     {
@@ -31,6 +36,8 @@ public class ProductsFunctions
     }
 
     [Function("GetLowStockProducts")]
+    [OpenApiOperation(operationId: "GetLowStockProducts", tags: new[] { "Products" }, Summary = "List products at or below their reorder threshold")]
+    [OpenApiResponseWithBody(HttpStatusCode.OK, "application/json", typeof(List<Product>), Description = "Low-stock products")]
     public async Task<HttpResponseData> GetLowStockProducts(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "products/low-stock")] HttpRequestData req)
     {
@@ -42,6 +49,10 @@ public class ProductsFunctions
     }
 
     [Function("GetProductById")]
+    [OpenApiOperation(operationId: "GetProductById", tags: new[] { "Products" }, Summary = "Get a single product by id")]
+    [OpenApiParameter(name: "id", In = ParameterLocation.Path, Required = true, Type = typeof(int))]
+    [OpenApiResponseWithBody(HttpStatusCode.OK, "application/json", typeof(Product), Description = "The product")]
+    [OpenApiResponseWithoutBody(HttpStatusCode.NotFound, Description = "Product not found")]
     public async Task<HttpResponseData> GetProductById(
         [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "products/{id:int}")] HttpRequestData req,
         int id)
@@ -55,6 +66,10 @@ public class ProductsFunctions
     }
 
     [Function("CreateProduct")]
+    [OpenApiOperation(operationId: "CreateProduct", tags: new[] { "Products" }, Summary = "Create a new product")]
+    [OpenApiRequestBody("application/json", typeof(ProductCreateRequest), Required = true)]
+    [OpenApiResponseWithBody(HttpStatusCode.Created, "application/json", typeof(Product), Description = "The created product")]
+    [OpenApiResponseWithoutBody(HttpStatusCode.BadRequest, Description = "Name or Sku missing")]
     public async Task<HttpResponseData> CreateProduct(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "products")] HttpRequestData req)
     {
@@ -81,6 +96,11 @@ public class ProductsFunctions
     }
 
     [Function("UpdateProduct")]
+    [OpenApiOperation(operationId: "UpdateProduct", tags: new[] { "Products" }, Summary = "Update an existing product")]
+    [OpenApiParameter(name: "id", In = ParameterLocation.Path, Required = true, Type = typeof(int))]
+    [OpenApiRequestBody("application/json", typeof(ProductUpdateRequest), Required = true)]
+    [OpenApiResponseWithBody(HttpStatusCode.OK, "application/json", typeof(Product), Description = "The updated product")]
+    [OpenApiResponseWithoutBody(HttpStatusCode.NotFound, Description = "Product not found")]
     public async Task<HttpResponseData> UpdateProduct(
         [HttpTrigger(AuthorizationLevel.Anonymous, "put", Route = "products/{id:int}")] HttpRequestData req,
         int id)
@@ -107,6 +127,10 @@ public class ProductsFunctions
     }
 
     [Function("DeleteProduct")]
+    [OpenApiOperation(operationId: "DeleteProduct", tags: new[] { "Products" }, Summary = "Delete a product")]
+    [OpenApiParameter(name: "id", In = ParameterLocation.Path, Required = true, Type = typeof(int))]
+    [OpenApiResponseWithoutBody(HttpStatusCode.NoContent, Description = "Deleted")]
+    [OpenApiResponseWithoutBody(HttpStatusCode.NotFound, Description = "Product not found")]
     public async Task<HttpResponseData> DeleteProduct(
         [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = "products/{id:int}")] HttpRequestData req,
         int id)
