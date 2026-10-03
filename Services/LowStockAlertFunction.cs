@@ -16,15 +16,6 @@ public class LowStockAlertFunction
         logger = logger;
     }
 
-    public override bool Equals(object? obj)
-    {
-        return obj is LowStockAlertFunction function &&
-               EqualityComparer<InventoryDbContext>.Default.Equals(_db, function._db) &&
-               EqualityComparer<IEmailAlertService>.Default.Equals(_emailAlertService, function._emailAlertService) &&
-               EqualityComparer<ILogger<LowStockAlertFunction>>.Default.Equals(this._logger, function._logger) &&
-               EqualityComparer<LowStockCheckService>.Default.Equals(_checkService, function._checkService) &&
-               EqualityComparer<ILogger<LowStockAlertFunction>>.Default.Equals(this._logger, function._logger);
-    }
 
     // Note: this relies on AzureWebJobsStorage for its schedule state. Locally that's Azurite
     // (see docker-compose.yml). On Render's free tier there's no real Azure Storage behind
