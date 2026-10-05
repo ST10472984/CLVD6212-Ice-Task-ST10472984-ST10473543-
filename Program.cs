@@ -1,9 +1,6 @@
 using InventoryTracker.Functions.Data;
 using InventoryTracker.Functions.Services;
 using Microsoft.EntityFrameworkCore;
-using InventoryTracker.Functions.Data;
-using InventoryTracker.Functions.Services;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -18,11 +15,11 @@ var host = new HostBuilder()
             options.UseNpgsql(configuration.GetConnectionString("Default")));
 
         services.AddSingleton<IEmailAlertService, SendGridEmailAlertService>();
-        services.AddSingleton<IEmailAlertService, SendGridEmailAlertService>();
+    
         services.AddScoped<LowStockCheckService>();
     })
     .Build();
-
+  
 // Demo/local convenience only: ensures the schema exists without requiring EF migrations.
 // For a real deployment, replace this with `dotnet ef migrations` + `context.Database.Migrate()`.
 using (var scope = host.Services.CreateScope())
