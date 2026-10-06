@@ -54,5 +54,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Check Render deploy hook
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_FUNCTIONS }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "ERROR: RENDER_DEPLOY_HOOK_FUNCTIONS secret is empty or missing."
+            exit 1
+          fi
+
       - name: Trigger Render deploy
-        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_FUNCTIONS }}"
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_FUNCTIONS }}
+        run: |
+          curl --fail --show-error --silent -X POST "$RENDER_DEPLOY_HOOK"
