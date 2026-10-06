@@ -24,9 +24,6 @@ jobs:
       - name: Build
         run: dotnet build InventoryTracker.Functions.csproj --no-restore --configuration Release
 
-      # TODO: add a test project (e.g. InventoryTracker.Functions.Tests) and replace this
-      # with: dotnet test InventoryTracker.Functions.Tests/InventoryTracker.Functions.Tests.csproj
-
   docker-build:
     needs: build-and-test
     runs-on: ubuntu-latest
