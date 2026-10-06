@@ -9,6 +9,7 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -29,15 +30,17 @@ jobs:
   docker-build:
     needs: build-and-test
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
       - name: Validate Docker image builds
         run: docker build -t inventory-functions .
 
- security-scan:
+  security-scan:
     needs: docker-build
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -52,6 +55,7 @@ jobs:
     needs: security-scan
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
     runs-on: ubuntu-latest
+
     steps:
       - name: Trigger Render deploy
         run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_FUNCTIONS }}"
