@@ -2,30 +2,56 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-    branches:
-      - master
+    branches: [master]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
 
-      - name: Restore dependencies
-        run: dotnet restore
+      - name: Restore
+        run: dotnet restore InventoryTracker.Functions.csproj
 
       - name: Build
-        run: dotnet build --no-restore
+        run: dotnet build InventoryTracker.Functions.csproj --no-restore --configuration Release
 
-      - name: Test
-        run: dotnet test --no-build --verbosity normal
+      # TODO: add a test project (e.g. InventoryTracker.Functions.Tests) and replace this
+      # with: dotnet test InventoryTracker.Functions.Tests/InventoryTracker.Functions.Tests.csproj
+
+  docker-build:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate Docker image builds
+        run: docker build -t inventory-functions .
+
+  security-scan:
+    needs: docker-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+
+  deploy:
+    needs: security-scan
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_FUNCTIONS }}"
