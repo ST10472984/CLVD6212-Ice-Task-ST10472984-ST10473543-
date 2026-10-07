@@ -32,70 +32,120 @@ dashboard. A live dashboard view also surfaces every low-stock item at a glance.
 
 ## Live Application
 
-**URL:** _add the Render URL here once both services are deployed and confirmed working_
+**URL:** _add the Render URL here once the application is deployed and confirmed working_
 
 ## Architecture
 
 - **Backend:** Azure Functions (.NET 8, isolated worker model). HTTP-triggered endpoints
-  handle Products CRUD and stock movements; a scheduled Timer trigger (plus a manual
-  on-demand endpoint, for environments where the scheduler isn't reliable) checks for
-  low stock and triggers an email alert.
-- **Frontend:** ASP.NET Core MVC, calling the Functions API through a typed `HttpClient`.
-  Provides a dashboard of currently low-stock items and full product management.
-- **Database:** PostgreSQL, accessed via Entity Framework Core and Npgsql. Locally, a
-  containerized Postgres instance runs through Docker Compose; in production, a hosted
-  free-tier provider (Supabase/Neon) is used instead, since a database running inside a
-  container does not survive a redeploy on most free hosting platforms.
-- **Local storage emulator:** Azurite, required by the Functions host locally for the
-  Timer trigger's internal state. Not needed once deployed, since real Azure/hosting
-  environments provide this differently (or the manual trigger endpoint is used instead).
-- **Third-party service:** SendGrid, for sending the low-stock email alert.
-- **Containerization:** each service (Functions API, MVC frontend) has its own
-  `Dockerfile`; a root `docker-compose.yml` orchestrates both plus Postgres and Azurite
-  for local development.
-- **CI/CD:** GitHub Actions builds and tests both projects, runs the test suite, validates
-  the Docker build, scans for vulnerabilities with Trivy, and — on a successful push to
-  `master` — triggers a deploy on Render for both services.
-[ MVC frontend ] --HTTP--> [ Azure Functions API ] --EF Core / Npgsql--> [ PostgreSQL ]
+  handle Products CRUD and stock movements, while the low-stock functionality checks
+  inventory levels and triggers email alerts.
+- **Database:** PostgreSQL, accessed through Entity Framework Core and Npgsql.
+- **Data layer:** The `Data/` folder contains the database context and data-access
+  components used to communicate with PostgreSQL.
+- **Functions:** The `Functions/` folder contains the Azure Functions and HTTP-triggered
+  endpoints responsible for handling application requests.
+- **Models:** The `Models/` folder contains the application's data models and entities.
+- **Services:** The `Services/` folder contains business logic and supporting services,
+  including functionality related to low-stock notifications.
+- **Third-party service:** SendGrid is used for sending low-stock email alerts.
+- **Containerization:** The root `Dockerfile` is used to build the application as a
+  container image.
+- **CI/CD:** GitHub Actions is configured through `.github/workflows/` to build the
+  application, validate the Docker image, run security scanning with Trivy, and trigger
+  deployment when the required deployment configuration is available.
+
+[ Functions / API ]
 |
-+--> [ SendGrid ] (low-stock email alerts)
++--> [ Data / EF Core / Npgsql ] --> [ PostgreSQL ]
+|
++--> [ Services ] --> [ SendGrid ]
+|
++--> [ Models ]
+
 
 ## Running Locally
 
-1. Copy `.env.example` to `.env` in the repo root and fill in real values. A placeholder
-   SendGrid key is fine for local use — the alert service logs a warning and skips
-   sending rather than failing.
-2. From the repo root:
-docker compose up --build
-3. Once running:
-   - MVC frontend: http://localhost:8080
-   - Functions API: http://localhost:7071/api/products
-   - API documentation (Swagger UI): http://localhost:7071/api/swagger/ui
+1. Make sure the .NET 8 SDK is installed on your machine.
+2. From the repository root, restore the project dependencies:
+
+dotnet restore InventoryTracker.Functions.csproj
+
+3. Build the application:
+
+dotnet build InventoryTracker.Functions.csproj
+
+4. Configure your local application settings using `local.settings.json`.
+   The `local.settings.json.example` file can be used as a template.
+5. Run the Azure Functions application using your preferred .NET/Azure Functions
+   development setup.
 
 ## Environment Variables
 
-See `.env.example` for the full list with placeholder values. Required:
+See `local.settings.json.example` for the available configuration values and placeholder
+settings.
+
+The application may require configuration for the following services:
 
 | Variable | Purpose |
 |---|---|
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | Local Postgres container credentials |
-| `SENDGRID_API_KEY` | SendGrid API key for sending alert emails |
-| `ALERT_EMAIL_FROM` | Verified sender address in SendGrid |
+| `ConnectionStrings__Default` | PostgreSQL database connection string |
+| `SENDGRID_API_KEY` | SendGrid API key used for sending alert emails |
+| `ALERT_EMAIL_FROM` | Sender address used for low-stock alerts |
 | `ALERT_EMAIL_TO` | Address that receives low-stock alerts |
 
-The deployed version on Render additionally requires `ConnectionStrings__Default` (the
-hosted Postgres connection string) and `InventoryApi__BaseUrl` (the deployed Functions
-API's URL) — set directly as environment variables in each Render service, not in `.env`.
+Deployment-specific values, such as the Render deployment configuration, should be
+configured through the hosting platform or GitHub repository secrets rather than being
+stored directly in the source code.
 
 ## Project Layout
 
-- `backend-functions/` — Azure Functions app: Products and StockMovements HTTP APIs, the
-  low-stock Timer trigger and its manual on-demand equivalent, EF Core `InventoryDbContext`
-- `backend-functions.Tests/` — unit tests for stock validation logic and the low-stock query
-- `frontend-mvc/` — ASP.NET Core MVC app: dashboard, Products CRUD, stock movement logging
-- `docker-compose.yml` — local orchestration: Postgres, Azurite, Functions, MVC
-- `.github/workflows/ci-cd.yml` — build, test, Docker build validation, security scan, deploy
+CLVD6212-Ice-Task-ST10472984-ST10473543-
+│
+├── .github/
+│ └── workflows/
+│ └── ci-cd.yml
+│
+├── Data/
+│ └── Database context and data-access components
+│
+├── Functions/
+│ └── Azure Functions and HTTP-triggered endpoints
+│
+├── Models/
+│ └── Application models and entities
+│
+├── Services/
+│ └── Business logic and supporting services
+│
+├── .dockerignore
+├── .gitattributes
+├── .gitignore
+├── Dockerfile
+├── InventoryTracker.Functions.csproj
+├── InventoryTracker.Functions.slnx
+├── Program.cs
+├── README.md
+├── host.json
+├── local.settings.json
+└── local.settings.json.example
+
+
+- `.github/workflows/` — GitHub Actions workflow configuration for building,
+  validating, scanning and deploying the application.
+- `Data/` — database context and data-access functionality.
+- `Functions/` — Azure Functions and HTTP-triggered API endpoints.
+- `Models/` — application models and entities.
+- `Services/` — business logic and supporting services.
+- `Dockerfile` — configuration used to build the application as a Docker container.
+- `InventoryTracker.Functions.csproj` — .NET project configuration and dependencies.
+- `InventoryTracker.Functions.slnx` — solution file for the project.
+- `Program.cs` — application startup and dependency-injection configuration.
+- `host.json` — Azure Functions host configuration.
+- `local.settings.json` — local Azure Functions configuration.
+- `local.settings.json.example` — example configuration file for local development.
+- `README.md` — project documentation.
 
 ## Group Members and Contributions
-Rohith Maharaj ST10473543
-Yuveer Arjoon ST10472984
+
+- Rohith Maharaj — ST10473543
+- Yuveer Arjoon — ST10472984
